@@ -1,0 +1,16 @@
+{
+  "name": "gpstracker",
+  "version": "0.0.1",
+  "description": "",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node .",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --silent"
+  },
+  "author": "Hélder Duarte",
+  "license": "ISC",
+  "devDependencies": {
+    "jest": "^28.1.3"
+  }
+}
