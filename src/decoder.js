@@ -1,3 +1,4 @@
+import { buildGPX, GarminBuilder } from "gpx-builder";
 import {
   convertDateTime,
   decToBinary,
@@ -14,15 +15,27 @@ import {
   LOGIN,
 } from "./constants.js";
 
-let devices = {};
+const { Point } = GarminBuilder.MODELS;
 
-export function decoder(buffer, conn) {
-  const hexString = buffer.toString("hex");
+const devices = [];
+const points = [];
+
+export function decoder(data, conn) {
+  const hexString = data.toString("hex");
   const type = hexString.substring(6, 8);
   const port = conn.remotePort;
-  const imei = getDeviceIMEIByPort(port);
+  const device = getDeviceByPort(port);
+  const { imei } = device;
 
+  console.log();
   console.log("DEVICES: ", JSON.stringify(devices, null, 2));
+  console.log();
+  console.log({ device });
+  console.log();
+
+  console.log("POINTS: ", JSON.stringify(points, null, 2));
+
+  // if (points.length > 0) generateFile();
 
   switch (type) {
     // LOGIN
@@ -34,9 +47,9 @@ export function decoder(buffer, conn) {
       const response = Buffer.from("787801010D0A", "hex");
       conn.write(response);
 
-      devices = { ...devices, [port]: { imei: imeiLogin } };
+      updateDevice({ imei: imeiLogin, port }, imeiLogin);
 
-      return { imei: imeiLogin, hexString, type };
+      return { imei: imeiLogin, port, hexString, type };
 
     // HEARTBEAT
     case HEARTBEAT:
@@ -80,18 +93,35 @@ export function decoder(buffer, conn) {
       console.log(`FLAGS: ${flags}`);
       console.log(`HEADING: ${heading}º`);
 
-      conn.write(buffer);
+      conn.write(data);
 
       if (type === POSITION) {
-        const { locations = [], ...remain } = devices[port];
+        const { locations = [], ...remain } = device;
+        locations.push({
+          datetime,
+          lat,
+          lon,
+          speed,
+          heading,
+          satellites,
+          flags,
+        });
 
-        devices[port] = {
-          ...remain,
-          locations: [
-            ...locations,
-            { datetime, lat, lon, speed, heading, satellites, flags },
-          ],
-        };
+        updateDevice(
+          {
+            ...remain,
+            locations,
+          },
+          imei
+        );
+
+        points.push(
+          new Point(lat, lon, {
+            ele: 0,
+            time: datetime,
+            bearing: heading,
+          })
+        );
       }
 
       return {
@@ -123,17 +153,17 @@ export function decoder(buffer, conn) {
       console.log(`AREA ${area}`);
       console.log(`UPLOAD INT ${uploadInterval}`);
 
-      conn.write(buffer);
+      conn.write(data);
 
-      const props = devices[port];
-
-      devices[port] = {
-        ...props,
-        battery,
-        softwareVersion,
-        area,
-        uploadInterval,
-      };
+      updateDevice(
+        {
+          battery,
+          softwareVersion,
+          area,
+          uploadInterval,
+        },
+        imei
+      );
 
       return {
         imei,
@@ -181,7 +211,7 @@ export function decoder(buffer, conn) {
       }
 
       console.log(message);
-      conn.write(buffer);
+      conn.write(data);
 
       return {
         imei,
@@ -195,7 +225,7 @@ export function decoder(buffer, conn) {
     case SOS:
       console.log("SOS 99");
       console.log("STRING: ", hexString);
-      conn.write(buffer);
+      conn.write(data);
       return { imei, hexString, type, sos: true };
 
     // OTHER NOT IMPLEMENTED
@@ -204,13 +234,37 @@ export function decoder(buffer, conn) {
       console.log("STRING: ", hexString);
       console.log("IMEI: ", imei);
 
-      conn.write(buffer);
+      conn.write(data);
 
       return { imei, hexString, type };
   }
+}
 
-  function getDeviceIMEIByPort(port) {
-    const { imei } = devices[port] || {};
-    return imei;
+export function getDeviceByPort(port) {
+  const device = devices.find(({ port: devicePort }) => port === devicePort);
+  return device || {};
+}
+
+export function updateDevice(obj, imei) {
+  const index = devices.findIndex(
+    ({ imei: deviceImei }) => imei === deviceImei
+  );
+
+  if (index < 0) {
+    devices.push({ imei, ...obj });
+  } else {
+    const device = devices.find(({ imei: deviceImei }) => imei === deviceImei);
+    devices.splice(index, 1);
+    devices.push({ ...device, ...obj });
   }
+}
+
+export function generateFile() {
+  const gpxData = new GarminBuilder();
+  gpxData.setSegmentPoints(points);
+  console.log();
+  console.log();
+  console.log(buildGPX(gpxData.toObject()));
+  console.log();
+  console.log();
 }

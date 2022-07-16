@@ -27,12 +27,12 @@ it("should convert hex to date time", () => {
 
 it("should translate hex coordinates to text", () => {
   expect(translateCoordinates("026B3F3E", "0C22AD65", "110100")).toEqual({
-    lat: "22º32.7657999999999",
-    lon: "113º6.640166666667028",
+    lat: 22.54609667,
+    lon: 113.11066944,
   });
 
   expect(translateCoordinates("0427a2fb", "00fb811c", "111100")).toEqual({
-    lat: "38º43.54970000000003",
-    lon: "-9º9.419599999999946",
+    lat: 38.72582833,
+    lon: -9.15699333,
   });
 });

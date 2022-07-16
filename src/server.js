@@ -17,9 +17,8 @@ function handleConnection(conn) {
   conn.once("close", onConnClose);
   conn.on("error", onConnError);
 
-  function onConnData(d) {
-    console.log("");
-    decoder(d, conn);
+  function onConnData(data) {
+    decoder(data, conn);
   }
 
   function onConnClose() {

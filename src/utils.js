@@ -1,3 +1,5 @@
+import convert from "geo-coordinates-parser";
+
 export function hexToDecimal(str) {
   return `${parseInt(str, 16)}`;
 }
@@ -6,7 +8,6 @@ export function decToBinary(str) {
   return Number(str).toString(2);
 }
 
-// 16070d0a2e23
 export function convertDateTime(hex) {
   const year = hexToDecimal(hex.substring(0, 2));
   const month = hexToDecimal(hex.substring(2, 4));
@@ -39,13 +40,18 @@ export function translateCoordinates(hexLat, hexLon, flags) {
 
   const lat =
     flags[1] == 0
-      ? `-${decLatDegrees}º${decLatMinutes}`
-      : `${decLatDegrees}º${decLatMinutes}`;
+      ? `-${decLatDegrees}º ${decLatMinutes}`
+      : `${decLatDegrees}º ${decLatMinutes}`;
 
   const lon =
     flags[2] == 1
-      ? `-${decLonDegrees}º${decLonMinutes}`
-      : `${decLonDegrees}º${decLonMinutes}`;
+      ? `-${decLonDegrees}º ${decLonMinutes}`
+      : `${decLonDegrees}º ${decLonMinutes}`;
 
-  return { lat, lon };
+  const converted = convert(`${lat}, ${lon}`, 8);
+
+  return {
+    lat: converted.decimalLatitude,
+    lon: converted.decimalLongitude,
+  };
 }
