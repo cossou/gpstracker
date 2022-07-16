@@ -35,7 +35,7 @@ export function decoder(data, conn) {
 
   console.log("POINTS: ", JSON.stringify(points, null, 2));
 
-  // if (points.length > 0) generateFile();
+  if (points.length > 0) generateFile();
 
   switch (type) {
     // LOGIN
@@ -95,34 +95,32 @@ export function decoder(data, conn) {
 
       conn.write(data);
 
-      if (type === POSITION) {
-        const { locations = [], ...remain } = device;
-        locations.push({
-          datetime,
-          lat,
-          lon,
-          speed,
-          heading,
-          satellites,
-          flags,
-        });
+      const { locations = [], ...remain } = device;
+      locations.push({
+        datetime,
+        lat,
+        lon,
+        speed,
+        heading,
+        satellites,
+        flags,
+      });
 
-        updateDevice(
-          {
-            ...remain,
-            locations,
-          },
-          imei
-        );
+      updateDevice(
+        {
+          ...remain,
+          locations,
+        },
+        imei
+      );
 
-        points.push(
-          new Point(lat, lon, {
-            ele: 0,
-            time: datetime,
-            bearing: heading,
-          })
-        );
-      }
+      points.push(
+        new Point(lat, lon, {
+          ele: 0,
+          time: datetime,
+          bearing: heading,
+        })
+      );
 
       return {
         imei,
