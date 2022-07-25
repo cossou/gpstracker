@@ -7,6 +7,9 @@
 # production
 /build
 
+# GPX
+/*.gpx
+
 # misc
 .DS_Store
 .env.local

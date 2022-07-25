@@ -3,6 +3,7 @@ import {
   hexToDecimal,
   decToBinary,
   translateCoordinates,
+  convertIntoDateTime,
 } from "../src/utils";
 
 it("should convert hex to decimal string", () => {
@@ -22,6 +23,12 @@ it("should convert hex to date time", () => {
 
   expect(convertDateTime("16070D0A2E23")).toEqual(
     new Date("2022-07-13T09:46:35.000Z")
+  );
+});
+
+it("should convert datetime to hex", () => {
+  expect(convertIntoDateTime(new Date("2022-07-13T09:46:35.000Z"))).toEqual(
+    "16070D0A2E23"
   );
 });
 

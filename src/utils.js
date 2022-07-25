@@ -8,6 +8,10 @@ export function decToBinary(str) {
   return Number(str).toString(2);
 }
 
+export function decToHex(number) {
+  return Number(number).toString(16).padStart(2, "0").toUpperCase();
+}
+
 export function convertDateTime(hex) {
   const year = hexToDecimal(hex.substring(0, 2));
   const month = hexToDecimal(hex.substring(2, 4));
@@ -27,6 +31,18 @@ export function convertDateTime(hex) {
   );
 
   return date;
+}
+
+export function convertIntoDateTime(datetime) {
+  const year = decToHex(datetime.getFullYear().toString().substr(-2));
+  const month = decToHex(datetime.getUTCMonth() + 1);
+  const day = decToHex(datetime.getUTCDate());
+
+  const hours = decToHex(datetime.getHours());
+  const minutes = decToHex(datetime.getMinutes());
+  const seconds = decToHex(datetime.getSeconds());
+
+  return `${year}${month}${day}${hours}${minutes}${seconds}`;
 }
 
 export function translateCoordinates(hexLat, hexLon, flags) {

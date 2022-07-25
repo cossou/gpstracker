@@ -1,3 +1,4 @@
+import fs from "fs";
 import { buildGPX, GarminBuilder } from "gpx-builder";
 import {
   convertDateTime,
@@ -13,12 +14,13 @@ import {
   POSITION,
   HEARTBEAT,
   LOGIN,
+  DEVICE_START,
+  DEVICE_STOP,
 } from "./constants.js";
 
 const { Point } = GarminBuilder.MODELS;
 
 const devices = [];
-const points = [];
 
 export function decoder(data, conn) {
   const hexString = data.toString("hex");
@@ -32,10 +34,6 @@ export function decoder(data, conn) {
   console.log();
   console.log({ device });
   console.log();
-
-  console.log("POINTS: ", JSON.stringify(points, null, 2));
-
-  if (points.length > 0) generateFile();
 
   switch (type) {
     // LOGIN
@@ -75,7 +73,8 @@ export function decoder(data, conn) {
         console.log("GPS offline positioning packet");
       }
 
-      const datetime = convertDateTime(hexString.substring(8, 20));
+      const datetimeHex = hexString.substring(8, 20);
+      const datetime = convertDateTime(datetimeHex);
       const satellites = hexToDecimal(hexString.substring(21, 22));
       const hexLat = hexString.substring(22, 30);
       const hexLon = hexString.substring(30, 38);
@@ -93,7 +92,13 @@ export function decoder(data, conn) {
       console.log(`FLAGS: ${flags}`);
       console.log(`HEADING: ${heading}º`);
 
-      conn.write(data);
+      // POSITION OK response
+      conn.write(
+        Buffer.from(
+          `${DEVICE_START}00${type}${datetimeHex}${DEVICE_STOP}`,
+          "hex"
+        )
+      );
 
       const { locations = [], ...remain } = device;
       locations.push({
@@ -104,6 +109,7 @@ export function decoder(data, conn) {
         heading,
         satellites,
         flags,
+        type,
       });
 
       updateDevice(
@@ -112,14 +118,6 @@ export function decoder(data, conn) {
           locations,
         },
         imei
-      );
-
-      points.push(
-        new Point(lat, lon, {
-          ele: 0,
-          time: datetime,
-          bearing: heading,
-        })
       );
 
       return {
@@ -238,6 +236,11 @@ export function decoder(data, conn) {
   }
 }
 
+export function getDeviceByIMEI(imei) {
+  const device = devices.find(({ imei: deviceImei }) => imei === deviceImei);
+  return device || {};
+}
+
 export function getDeviceByPort(port) {
   const device = devices.find(({ port: devicePort }) => port === devicePort);
   return device || {};
@@ -257,12 +260,46 @@ export function updateDevice(obj, imei) {
   }
 }
 
-export function generateFile() {
+export function deviceGPX(deviceImei) {
+  const { imei, locations = [] } = getDeviceByIMEI(deviceImei);
+
+  if (!imei || locations.length <= 1) {
+    console.log("Error! No data to create GPX!", { imei, locations });
+    return;
+  }
+
+  const now = new Date();
+  const filename = `trip_${imei}_${now.toISOString()}.gpx`;
+
+  locations.sort((a, b) => a.datetime - b.datetime);
+
+  const points = locations.map(
+    ({ lat, lon, datetime, heading }) =>
+      new Point(lat, lon, {
+        ele: 0,
+        time: datetime,
+        bearing: heading,
+      })
+  );
+
   const gpxData = new GarminBuilder();
   gpxData.setSegmentPoints(points);
+
+  const data = buildGPX(gpxData.toObject());
+
+  // fs.writeFileSync(filename, data);
+
   console.log();
+  console.log(`Write GPX ${filename}!`);
   console.log();
-  console.log(buildGPX(gpxData.toObject()));
-  console.log();
-  console.log();
+
+  return data;
+}
+
+export function deviceStatus(deviceImei) {
+  return getDeviceByIMEI(deviceImei);
+}
+
+export function deviceRestart(deviceImei) {
+  const device = getDeviceByIMEI(deviceImei);
 }
